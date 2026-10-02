@@ -7,13 +7,13 @@ Replication files for **Basis Risk in Prediction Markets: Can a Rain Contract He
 ## What is in this repository
 
 ```
-src/                 the code, ten scripts run in order (01 to 10)
-data/                inputs: the ten venues and their season calendar
-results/             every table behind the paper
-figures/             the three figures of the paper
-preregistration.md   definitions fixed before any data was downloaded
-preregistration_deviations.md   every deviation from it
-run_all.sh           rebuilds everything from the raw data
+src/                           the code, ten scripts run in order (01 to 10)
+data/                          inputs: the ten venues and their season calendar
+results/                       every table behind the paper
+figures/                       the three figures of the paper
+preregistration.md             definitions fixed before any data was downloaded
+preregistration_deviations.md  every deviation from it
+run_all.sh                     rebuilds everything from the raw data
 ```
 
 The pre-registration is time-stamped 16 September 2026, 19:11 UTC, and kept unchanged (in French). Deviations from it, including the analyses added afterwards, are listed in `preregistration_deviations.md`.

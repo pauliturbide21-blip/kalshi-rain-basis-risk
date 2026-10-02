@@ -1,21 +1,8 @@
-"""22_strategie.py : recherche de la meilleure strategie de couverture, dix rooftops, deux saisons.
-Hypotheses de travail (bornes hautes, rappelees dans chaque sortie) :
-  H-A liquidite illimitee : le gerant achete la taille voulue (open interest median reel a l'heure d'achat : 2 contrats sur l'ancienne serie).
-  H-B execution au prix milieu : ordre limite servi au mid ; l'ecart de carnet est rapporte en scenario degrade (quart et demi-ecart).
-  H-C achat la veille a midi : aucune serie a plusieurs jours n'existe pour New York sur l'historique (serie week-end depuis le 17 aout 2026 seulement).
-Regles declarees :
-  - soiree gachee D_t : definition preenregistree (au moins 1 mm entre 18 h et 1 h a Central Park) ;
-  - flux de la soiree sans couverture : R x (1 - D) - K (la recette est perdue, le cout engage est paye) ; sensibilite : perte partielle 50 % ;
-  - couverture : N = h x R contrats Oui achetes la veille a midi au prix pi (dernier echange, sinon mid), frais 0,07 x pi x (1 - pi) ; payout N x Y ;
-  - jours sans cotation a l'heure d'achat : soiree non couvrable, comptee ; sensibilite : achat le jour meme a 9 h ;
-  - charges fixes : F = (F/A) x A avec A la marge de saison attendue, prelevees par douziemes le 1er de chaque mois de saison ; F/A de reference 0,75, grille 0,6 et 0,9 ;
-  - trois objectifs : (1) trou de tresorerie maximal (minimum du cumul de tresorerie en saison), (2) resultat de la pire saison sur vingt (5e centile), (3) resultat moyen ;
-  - reglage choisi sur une saison, evalue sur l'autre, dans les deux sens ; bootstrap par blocs de 7 jours, 2 000 saisons.
-Sorties : tables/strategie_grille.csv, tables/strategie_optimale.csv, tables/conditions.csv, data/chemins_saison.csv, data/resultats_strategie.json
-"""
+"""Hedging with the real Kalshi contract: best of 132 settings, chosen on one season and tested on the other (Table 2).
+Comments in the code are in French."""
 import os, json, math, itertools
 import numpy as np, pandas as pd
-HERE=os.path.dirname(os.path.abspath(__file__)); TAB=f"{HERE}/tables"; DATA=f"{HERE}/data"
+HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); os.makedirs(f"{HERE}/build",exist_ok=True); TAB=f"{HERE}/results"; DATA=f"{HERE}/data"
 B=2000; BLOCK=7; rng=np.random.default_rng(20260918)
 H_GRID=[round(x,1) for x in np.arange(0,1.01,0.1)]
 SEUILS=[0.0,0.2,0.3,0.4,0.5,0.6]
@@ -29,8 +16,8 @@ days=pd.read_csv(f"{DATA}/days_prices_NYC.csv",parse_dates=["date"])
 days=days[days.ev_ok&days.day_ok].copy(); days["saison"]=days.date.dt.year
 days=days[(days.date.dt.month>=5)&(days.date.dt.month<=9)&days.saison.isin([2025,2026])].sort_values("date").reset_index(drop=True)
 days["pi_ref"]=days[f"pi_{ACHAT_REF}"]; days["pi_alt"]=days[f"pi_{ACHAT_ALT}"]; days["sp_ref"]=days[f"spread_{ACHAT_REF}"].fillna(days[f"spread_{ACHAT_REF}"].median()); days["sp_alt"]=days[f"spread_{ACHAT_ALT}"].fillna(days[f"spread_{ACHAT_ALT}"].median())
-cal=pd.read_csv(f"{DATA}/calendrier.csv",parse_dates=["date"])
-panel=pd.read_csv(f"{DATA}/panel_rooftops.csv")
+cal=pd.read_csv(f"{DATA}/calendar.csv",parse_dates=["date"])
+panel=pd.read_csv(f"{DATA}/venues.csv")
 print("jours de saison observes :",days.groupby("saison").size().to_dict(),"| sans cotation la veille a midi :",days.groupby("saison").pi_ref.apply(lambda x:int(x.isna().sum())).to_dict(),"| sans cotation le jour a 9 h :",days.groupby("saison").pi_alt.apply(lambda x:int(x.isna().sum())).to_dict())
 
 def season_arrays(nom,saison,achat="ref"):
@@ -145,9 +132,9 @@ for v in panel.itertuples():
                                "gain_resultat_moyen":float((res-res0).mean()),"gain_resultat_ic_bas":float(np.percentile(res-res0,2.5)),"gain_resultat_ic_haut":float(np.percentile(res-res0,97.5)),
                                "pire_5pct_sans":float(np.percentile(res0,5)),"pire_5pct_avec":float(np.percentile(res,5)),"resultat_moyen_sans":float(res0.mean())})
     print(nom,"ok")
-pd.DataFrame(grille).to_csv(f"{TAB}/strategie_grille.csv",index=False)
-opt=pd.DataFrame(optimal); opt.to_csv(f"{TAB}/strategie_optimale.csv",index=False)
-pd.DataFrame(conditions).to_csv(f"{TAB}/conditions.csv",index=False)
+pd.DataFrame(grille).to_csv(f"{HERE}/build/strategie_grille.csv",index=False)
+opt=pd.DataFrame(optimal); opt.to_csv(f"{TAB}/hedge_kalshi.csv",index=False)
+pd.DataFrame(conditions).to_csv(f"{HERE}/build/conditions.csv",index=False)
 pd.DataFrame(chemins).to_csv(f"{DATA}/chemins_saison.csv",index=False)
 json.dump(summary,open(f"{DATA}/resultats_strategie.json","w"),indent=1,default=str)
 pd.set_option("display.width",250)

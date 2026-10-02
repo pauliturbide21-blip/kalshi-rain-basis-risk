@@ -1,16 +1,9 @@
-"""21_calendrier.py : calendrier des soirees par rooftop et par saison, avec recette attendue et cout engage.
-Saisons : 2025 (1er mai au 30 septembre) et 2026 (1er mai au 15 septembre, derniere date disponible dans les donnees Kalshi).
-Regles declarees :
-  - une soiree a lieu chaque jour d'ouverture declare du lieu ;
-  - une grosse soiree est un vendredi ou un samedi d'ouverture, la veille d'un jour ferie federal (Memorial Day, 4 juillet, Labor Day) et le jour ferie
-    lui-meme s'il est ouvert, la premiere et la derniere soiree d'ouverture de la saison ;
-  - les autres soirees d'ouverture sont des soirees normales, y compris les soirees a programmation de semaine (jeudi, dimanche).
-Sortie : data/calendrier.csv
-"""
+"""Season calendar per venue (2025, 2026): open nights, big nights, expected revenue and committed cost.
+Comments in the code are in French."""
 import os, csv
 from datetime import date, timedelta
 import pandas as pd
-HERE=os.path.dirname(os.path.abspath(__file__))
+HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JOURS={"lun":0,"mar":1,"mer":2,"jeu":3,"ven":4,"sam":5,"dim":6}
 def jours_set(s):
     s=s.strip()
@@ -20,7 +13,7 @@ def jours_set(s):
     return {JOURS[x] for x in s.split(",")}
 SEASONS={2025:(date(2025,5,1),date(2025,9,30)),2026:(date(2026,5,1),date(2026,9,15))}
 FERIES={2025:[date(2025,5,26),date(2025,7,4),date(2025,9,1)],2026:[date(2026,5,25),date(2026,7,4),date(2026,9,7)]}
-panel=pd.read_csv(f"{HERE}/data/panel_rooftops.csv")
+panel=pd.read_csv(f"{HERE}/data/venues.csv")
 rows=[]
 for v in panel.itertuples():
     ouv=jours_set(v.jours_ouverture)
@@ -37,7 +30,7 @@ for v in panel.itertuples():
                          "ferie_ou_veille":int(d in feries or d in veilles),"ouverture_ou_cloture":int(d in (first,last)),
                          "R_bas":getattr(v,f"R_{tier}_bas") if ouvert else 0,"R":getattr(v,f"R_{tier}") if ouvert else 0,"R_haut":getattr(v,f"R_{tier}_haut") if ouvert else 0,
                          "K_bas":getattr(v,f"K_{tier}_bas") if ouvert else 0,"K":getattr(v,f"K_{tier}") if ouvert else 0,"K_haut":getattr(v,f"K_{tier}_haut") if ouvert else 0})
-cal=pd.DataFrame(rows); cal.to_csv(f"{HERE}/data/calendrier.csv",index=False)
+cal=pd.DataFrame(rows); cal.to_csv(f"{HERE}/data/calendar.csv",index=False)
 g=cal[cal.ouvert==1].groupby(["nom","saison"]).agg(soirees=("ouvert","sum"),grosses=("grosse","sum"),R_saison=("R","sum"),K_saison=("K","sum"),R_grosses=("R",lambda x:0))
 g["part_grosses_R"]=cal[(cal.ouvert==1)&(cal.grosse==1)].groupby(["nom","saison"]).R.sum()/cal[cal.ouvert==1].groupby(["nom","saison"]).R.sum()
 print(g.drop(columns="R_grosses").round(2).to_string())

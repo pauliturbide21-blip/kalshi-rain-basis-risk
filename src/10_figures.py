@@ -1,11 +1,8 @@
-"""29_figures_article.py : the three figures of the SSRN letter (English, black-and-white safe).
-fig1  calibration of the Kalshi price (a) and the four payout/loss groups (b)
-fig2  230 Fifth, 2026 season: cumulative contribution of the real and the perfect contract (a), payout on each lost evening (b)
-fig3  ten venues, out-of-sample gain in the worst-of-twenty season, real contract vs perfect contract
-Same data as 27/28_figures_memoire; every number printed at the end is checked against the tables."""
+"""The three figures of the paper, drawn from results/ and data/.
+Comments in the code are in French."""
 import os, numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
-HERE = os.path.dirname(os.path.abspath(__file__)); OUT = f"{HERE}/figures"; os.makedirs(OUT, exist_ok=True)
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); OUT = f"{HERE}/figures"; os.makedirs(OUT, exist_ok=True)
 INK = "#1a1a1a"; MID = "#6b6b6b"; LIGHT = "#d9d9d9"; BLUE = "#1f5fa8"; ORANGE = "#d4531c"; RED = "#b8322a"; W = 6.5
 plt.rcParams.update({"font.family": "serif", "font.serif": ["STIXGeneral", "DejaVu Serif"], "mathtext.fontset": "stix", "font.size": 8.5,
     "axes.spines.top": False, "axes.spines.right": False, "axes.edgecolor": MID, "axes.labelcolor": INK, "xtick.color": INK, "ytick.color": INK,
@@ -13,8 +10,8 @@ plt.rcParams.update({"font.family": "serif", "font.serif": ["STIXGeneral", "Deja
 def save(name): plt.savefig(f"{OUT}/{name}.pdf", bbox_inches="tight"); plt.savefig(f"{OUT}/{name}.png", dpi=220, bbox_inches="tight"); plt.close(); print("saved", name)
 
 # ------------------------------------------------------------------ fig 1
-cal = pd.read_csv(f"{HERE}/tables/h2_fiabilite.csv"); cal = cal[cal.ville == "NYC"] if "ville" in cal else cal
-h1 = pd.read_csv(f"{HERE}/tables/h1_contingence.csv"); h1 = h1[h1.ville == "NYC"].iloc[0]
+cal = pd.read_csv(f"{HERE}/results/calibration.csv"); cal = cal[cal.ville == "NYC"] if "ville" in cal else cal
+h1 = pd.read_csv(f"{HERE}/results/trigger.csv"); h1 = h1[h1.ville == "NYC"].iloc[0]
 fig, (a, b) = plt.subplots(1, 2, figsize=(W, 2.9), gridspec_kw={"width_ratios": [1.0, 1.0], "wspace": 0.38})
 a.plot([0, 1], [0, 1], ls=(0, (4, 3)), color=MID, lw=0.9, label="Perfect calibration")
 for src, mk, col, mfc, lab in (("kalshi_veille_12h", "o", BLUE, BLUE, "Kalshi price"), ("mos_nbs", "s", ORANGE, "white", "NWS forecast")):
@@ -37,7 +34,7 @@ b.text(0.5, 52, f"False payouts:\nB / (A + B) = {h1.FP*100:.0f}%", fontsize=8, h
 save("fig1_calibration_trigger")
 
 # ------------------------------------------------------------------ fig 2
-cp = pd.read_csv(f"{HERE}/data/chemins_parfait.csv", parse_dates=["date"]); cal_ = pd.read_csv(f"{HERE}/data/calendrier.csv", parse_dates=["date"])
+cp = pd.read_csv(f"{HERE}/data/season_paths.csv", parse_dates=["date"]); cal_ = pd.read_csv(f"{HERE}/data/calendar.csv", parse_dates=["date"])
 gro = cal_[(cal_.nom == "230 Fifth") & (cal_.saison == 2026)][["date", "grosse", "K", "R"]]
 def nights(c):
     g = cp[(cp.nom == "230 Fifth") & (cp.contrat == c)].sort_values("date").copy()
@@ -65,7 +62,7 @@ print("fig2 check: end contrib real", round(contrib_r[-1]), "perfect", round(con
 print("fig2 check: sd across big nights real", round(nr.avec.std(ddof=0) / 1e3, 1), "perfect", round(npf.avec.std(ddof=0) / 1e3, 1), "n big nights", len(nr))
 
 # ------------------------------------------------------------------ fig 3
-sc = pd.read_csv(f"{HERE}/tables/parfait_scenario_bon_sens.csv")
+sc = pd.read_csv(f"{HERE}/results/hedge_equal_coverage.csv")
 sc["worst"] = (sc.pire5_avec - sc.pire5_sans) / sc.R_saison * 100; sc["e"] = sc.ederington_e * 100; sc["eng"] = sc.engagement / sc.R_saison * 100
 real = sc[(sc.contrat == "reel") & (sc.seuil == 0.5) & (sc.chargement == 0)]; perf = sc[(sc.contrat == "parfait") & (sc.seuil == 0.2) & (sc.chargement == 0)]
 order = real[real.execution == "mid"].sort_values("e", ascending=False).nom.tolist()

@@ -1,12 +1,11 @@
-"""03_cost.py : H2, chargement. Prix de couverture depuis les chandeliers horaires, fiabilite, Brier, prevision MOS,
-chargement brut et effectif, capacite, comparateur assurantiel.
-Entrees : data/days_<ville>.csv, data/raw/candles/*.json, data/raw/mos_*.csv. Sorties : data/days_prices_<ville>.csv, tables/h2_*.csv, figures/fig2_calibration.png, data/resultats_h2.json
-"""
+"""Price (Table 1, Figure 1a). Price the day before at noon, calibration and Brier score against the NWS forecast,
+premium per useful dollar, liquidity.
+Comments in the code are in French."""
 import os, json, math
 import numpy as np, pandas as pd
 from datetime import datetime, date, timedelta, timezone
 from zoneinfo import ZoneInfo
-HERE=os.path.dirname(os.path.abspath(__file__)); RAW=f"{HERE}/data/raw"; TAB=f"{HERE}/tables"; FIG=f"{HERE}/figures"
+HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); RAW=f"{HERE}/data/raw"; TAB=f"{HERE}/results"; FIG=f"{HERE}/build"; os.makedirs(FIG,exist_ok=True)
 TZ={"NYC":"America/New_York","MIA":"America/New_York","CHI":"America/Chicago"}; MOSST={"NYC":"KNYC","MIA":"KMIA","CHI":"KORD"}
 PURCHASE={"veille_12h":(-1,12),"veille_18h":(-1,18),"jour_9h":(0,9)}; PREF="veille_12h"
 FEE=lambda p:0.07*p*(1-p)
@@ -166,8 +165,8 @@ for city in ["NYC","MIA","CHI"]:
                 t_ins.append({"ville":city,"seuil_mm":th,"plage":wn,"P_declenchement":Ptrig,"prime_pct":prime,"Lambda_assurance":prime/Ptrig if Ptrig else np.nan})
     results[city]={"chargement":row}
 
-pd.DataFrame(t_charge).to_csv(f"{TAB}/h2_chargement.csv",index=False); pd.DataFrame(t_cap).to_csv(f"{TAB}/h2_capacite.csv",index=False)
-pd.DataFrame(t_fiab).to_csv(f"{TAB}/h2_fiabilite.csv",index=False); pd.DataFrame(t_ins).to_csv(f"{TAB}/h2_assurance.csv",index=False)
+pd.DataFrame(t_charge).to_csv(f"{TAB}/price.csv",index=False); pd.DataFrame(t_cap).to_csv(f"{TAB}/liquidity.csv",index=False)
+pd.DataFrame(t_fiab).to_csv(f"{TAB}/calibration.csv",index=False); pd.DataFrame(t_ins).to_csv(f"{HERE}/build/h2_assurance.csv",index=False)
 json.dump(results,open(f"{HERE}/data/resultats_h2.json","w"),indent=1,default=str)
 
 # ---------- figure 2 : fiabilite, New York

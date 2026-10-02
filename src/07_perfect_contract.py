@@ -1,16 +1,8 @@
-"""24_contrat_parfait.py : contrefactuel, un contrat Kalshi parfait.
-Definition declaree : le contrat paie 1 dollar si et seulement si la soiree est perdue (D_t = 1, definition preenregistree : au moins 1 mm
-entre 18 h et 1 h a Central Park). Risque de base nul par construction. Prix la veille a midi :
-  regle A (conditionnelle) : pi*_t = pi_t x P(D = 1 | Y = 1), la cote reelle de pluie journaliere multipliee par la part des jours de pluie
-                             qui gachent la soiree (1 moins FP, mesure sur l'autre saison pour rester hors echantillon) ;
-  regle B (actuarielle inconditionnelle) : pi*_t = P(D = 1) de l'autre saison.
-Chargement du teneur de marche lambda dans {0 ; 0,10 ; 0,25}, frais Kalshi 0,07 x pi (1 - pi), ecart de carnet reel en scenario degrade.
-Memes hypotheses H-A (liquidite illimitee), H-B (mid), H-C (veille a midi), meme grille de strategies, memes objectifs, meme validation croisee.
-Sorties : tables/parfait_optimale.csv, tables/parfait_scenario_bon_sens.csv, figures/fig_contrat_parfait.png/.pdf, data/chemins_parfait.csv
-"""
+"""Counterfactual perfect contract, paying only on a lost evening (Table 2, Figures 2 and 3).
+Comments in the code are in French."""
 import os, json, math
 import numpy as np, pandas as pd
-HERE=os.path.dirname(os.path.abspath(__file__)); TAB=f"{HERE}/tables"; DATA=f"{HERE}/data"; FIG=f"{HERE}/figures"
+HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); TAB=f"{HERE}/results"; DATA=f"{HERE}/data"; FIG=f"{HERE}/build"; os.makedirs(FIG,exist_ok=True)
 B=2000; BLOCK=7; rng=np.random.default_rng(20260918)
 H_GRID=[round(x,1) for x in np.arange(0,1.01,0.1)]; SEUILS=[0.0,0.1,0.2,0.3,0.4,0.5]
 CRITERES=[(sel,s) for sel in ("grosses","toutes") for s in SEUILS]
@@ -18,7 +10,7 @@ FA_REF=0.75; FEE=lambda p:0.07*p*(1-p); PERTE=0.5   # part de la recette perdue 
 days=pd.read_csv(f"{DATA}/days_prices_NYC.csv",parse_dates=["date"]); days=days[days.ev_ok&days.day_ok].copy(); days["saison"]=days.date.dt.year
 days=days[(days.date.dt.month>=5)&(days.date.dt.month<=9)&days.saison.isin([2025,2026])].sort_values("date").reset_index(drop=True)
 days["pi_ref"]=days.pi_veille_12h; days["sp_ref"]=days.spread_veille_12h.fillna(days.spread_veille_12h.median())
-cal=pd.read_csv(f"{DATA}/calendrier.csv",parse_dates=["date"]); panel=pd.read_csv(f"{DATA}/panel_rooftops.csv")
+cal=pd.read_csv(f"{DATA}/calendar.csv",parse_dates=["date"]); panel=pd.read_csv(f"{DATA}/venues.csv")
 # parametres de prix estimes sur l'autre saison
 par={}
 for s in (2025,2026):
@@ -92,7 +84,7 @@ for v in panel.itertuples():
         hed=np.where(e,0.6*PERTE*R*(payout-pstar[0]-FEE(pstar[0])),0.0); rev0=R*(1-PERTE*c.D.values)
         for i,r in enumerate(c.itertuples()): chem.append({"nom":nom,"contrat":contrat,"date":r.date.date().isoformat(),"D":int(r.D),"couverte":int(e[i]),"cum_sans":rev0[:i+1].sum(),"cum_avec":(rev0+hed)[:i+1].sum()})
     print(nom,"ok")
-opt=pd.DataFrame(rows); opt.to_csv(f"{TAB}/parfait_optimale.csv",index=False); bs=pd.DataFrame(bons); bs.to_csv(f"{TAB}/parfait_scenario_bon_sens.csv",index=False); ch=pd.DataFrame(chem); ch.to_csv(f"{DATA}/chemins_parfait.csv",index=False)
+opt=pd.DataFrame(rows); opt.to_csv(f"{TAB}/hedge_perfect.csv",index=False); bs=pd.DataFrame(bons); bs.to_csv(f"{TAB}/hedge_equal_coverage.csv",index=False); ch=pd.DataFrame(chem); ch.to_csv(f"{DATA}/season_paths.csv",index=False)
 pd.set_option("display.width",250)
 print("\n--- reglage optimal hors echantillon, mediane des dix lieux, gain en % de la recette de saison")
 g=opt.groupby(["regle_prix","chargement","objectif","saison_choix"]).agg(gain_pct=("gain_pct_R","median"),n_pos=("ic_bas",lambda x:int((x>0).sum())),n_neg=("ic_haut",lambda x:int((x<0).sum())),h=("h","median"),crit=("critere",lambda x:x.mode()[0])).reset_index()

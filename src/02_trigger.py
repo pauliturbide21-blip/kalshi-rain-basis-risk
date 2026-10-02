@@ -1,11 +1,10 @@
-"""02_basis.py : H1, risque de base. Construit la table des jours (marche + station), calcule la contingence Y x D,
-FP, UC, phi, rho, les quatre etats, bootstrap par blocs de 7 jours, experience naturelle (declencheurs A et B), concordance, grilles.
-Sorties : data/days_<ville>.csv, tables/h1_*.csv, figures/fig1_etats_du_monde.png, data/resultats_h1.json
-"""
+"""Trigger quality (Table 1, Figure 1b). Builds the day table (Y: contract pays, D: evening lost) and computes the share of
+false payouts, the correlation, the re-scoring under the trace rule and the sensitivity to the loss definition (7-day block bootstrap).
+Comments in the code are in French."""
 import os, json, glob, re, math
 import numpy as np, pandas as pd
 from datetime import datetime, date, timedelta
-HERE=os.path.dirname(os.path.abspath(__file__)); RAW=f"{HERE}/data/raw"; TAB=f"{HERE}/tables"; FIG=f"{HERE}/figures"
+HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); RAW=f"{HERE}/data/raw"; TAB=f"{HERE}/results"; FIG=f"{HERE}/build"; os.makedirs(FIG,exist_ok=True)
 os.makedirs(TAB,exist_ok=True); os.makedirs(FIG,exist_ok=True)
 PRE=json.load(open(f"{HERE}/data/params.json")) if os.path.exists(f"{HERE}/data/params.json") else {}
 IN_PER_MM=1/25.4
@@ -144,10 +143,10 @@ for city in ["NYC","MIA","CHI"]:
     rn=with_ci(pn,bn,list(pn.keys())); rn.update({"ville":city,"n":len(d)}); tables_nat.append(rn)
     results[city]={"contingence":r,"experience_naturelle":rn}
 
-pd.DataFrame(tables_cont).to_csv(f"{TAB}/h1_contingence.csv",index=False)
-pd.DataFrame(tables_sens).to_csv(f"{TAB}/h1_sensibilite.csv",index=False)
-pd.DataFrame(tables_nat).to_csv(f"{TAB}/h1_experience_naturelle.csv",index=False)
-pd.DataFrame(tables_conc).to_csv(f"{TAB}/h1_concordance.csv",index=False)
+pd.DataFrame(tables_cont).to_csv(f"{TAB}/trigger.csv",index=False)
+pd.DataFrame(tables_sens).to_csv(f"{TAB}/trigger_sensitivity.csv",index=False)
+pd.DataFrame(tables_nat).to_csv(f"{TAB}/trigger_trace_rule.csv",index=False)
+pd.DataFrame(tables_conc).to_csv(f"{HERE}/build/h1_concordance.csv",index=False)
 json.dump(results,open(f"{HERE}/data/resultats_h1.json","w"),indent=1,default=str)
 
 # ---------- figure 1 : quatre etats du monde, en part des jours, par ville, avec IC

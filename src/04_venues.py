@@ -1,21 +1,7 @@
-"""20_panel.py : panel de dix rooftops new-yorkais reels, parametres publics et estimations encadrees.
-Chaque estimation porte sa methode et ses sources. Sortie : data/panel_rooftops.csv, tables/panel_parametres.csv.
-
-Methode d'estimation, declaree avant tout calcul :
-  recette d'une soiree R = capacite x taux d'occupation x rotation x depense par tete
-  cout engage la veille K = personnel + securite + programmation + promotion, non annulable
-Les bornes basse et haute proviennent des intervalles des parametres ; la valeur centrale est le produit des valeurs centrales.
-Ancrages publics :
-  - 230 Fifth, Crain's 2012 : 1,1 million de clients par an et plus de 20 M$ de recettes, soit environ 18 $ par client en 2012 (25 $ en dollars de 2026, +40 % d'indice des prix restauration).
-  - Union (POS, 2023) : le samedi fait plus de 25 % de la semaine ; FYRE (2026, France) : vendredi plus samedi 41,8 %.
-  - Time Out Market : privatisation du rooftop 28 000 $ pour 150 a 400 personnes (70 a 187 $ par tete, evenement prive).
-  - Porcci NYC (2026) : soiree de 500 personnes = 12 a 13 serveurs, 5 a 7 barmen, 2 a 3 hotes, 2 agents, 1 superviseur ; Calvis : 1 agent pour 25 a 50 personnes.
-  - NYSDOL 2026 : salaire minimum 17 $, service au pourboire 14,15 $ en especes ; securite de club ~21 $ de l'heure (ZipRecruiter, non verifie).
-  - Cachets DJ par palier (Billboard, non verifie) : 500 / 2 000 / 5 000 / 10 000 $ ; resident local 150 a 500 $ (forums) ; acompte 50 % non remboursable (Texas Music Office, DJ TechTools).
-  - Loi de planification previsible NYC : planning verrouille 14 jours avant ; indemnite de presence 3 heures.
-"""
+"""The ten venues: capacity, revenue and committed cost per night (low, central, high), from public sources.
+Comments in the code are in French."""
 import os, csv, math
-HERE=os.path.dirname(os.path.abspath(__file__)); os.makedirs(f"{HERE}/data",exist_ok=True); os.makedirs(f"{HERE}/tables",exist_ok=True)
+HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); os.makedirs(f"{HERE}/build",exist_ok=True); os.makedirs(f"{HERE}/data",exist_ok=True); os.makedirs(f"{HERE}/results",exist_ok=True)
 
 # Depense par tete (boissons, hors taxes et pourboires) : 2 a 3 consommations a p dollars, plus 15 % de nourriture quand la carte existe
 def spend(p_low,p_high,food=0.15): return (2.0*p_low*(1+food), 2.5*(p_low+p_high)/2*(1+food), 3.0*p_high*(1+food))
@@ -83,8 +69,8 @@ for v in VENUES:
                  "methode":"R = capacite x occupation x rotation x depense par tete (2 a 3 consommations plus 15 % de nourriture) ; K = personnel au ratio Porcci pour 500 personnes mis a l'echelle x 6 a 8 h x taux NYSDOL charges, plus securite (1 agent pour 25 a 50), plus cachet (100 % pour une grosse soiree, 15 % pour un soir normal), plus promotion (3 a 5 % de R)",
                  "sources":v["src"]})
     params.append({"nom":v["nom"],"occ_normal":v["occ_n"],"occ_grosse":v["occ_b"],"rot_normal":v["rot_n"],"rot_grosse":v["rot_b"],"heures":HOURS,"spend":tuple(round(x) for x in s)})
-with open(f"{HERE}/data/panel_rooftops.csv","w",newline="") as f:
+with open(f"{HERE}/data/venues.csv","w",newline="") as f:
     w=csv.DictWriter(f,fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
-with open(f"{HERE}/tables/panel_parametres.csv","w",newline="") as f:
+with open(f"{HERE}/build/panel_parametres.csv","w",newline="") as f:
     w=csv.DictWriter(f,fieldnames=list(params[0].keys())); w.writeheader(); w.writerows(params)
 for r in rows: print(f"{r['nom']:26s} cap {r['capacite']:5d}  R normal {r['R_normal_bas']:7d} {r['R_normal']:7d} {r['R_normal_haut']:7d} | R grosse {r['R_grosse_bas']:7d} {r['R_grosse']:7d} {r['R_grosse_haut']:7d} | K grosse {r['K_grosse_bas']:6d} {r['K_grosse']:6d} {r['K_grosse_haut']:6d}")

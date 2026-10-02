@@ -1,15 +1,7 @@
-"""25_filtre_prevision.py : le gerant croise la cote Kalshi avec la prevision horaire avant d'acheter.
-Question : acheter le contrat journalier reel seulement quand la prevision place la pluie pendant les heures d'ouverture
-reduit-il les paiements inutiles et le cout de la couverture ? Le contrat reste le meme (il paie sur la pluie journaliere).
-Prevision : MOS NBS (IEM), cycle 12 Z ou 13 Z de la veille (achat la veille a midi, hypothese H-C), probabilites p06 (pluie >= 0,01 pouce sur 6 h) :
-  fenetre soir  = p06 valide 00 Z du lendemain (14 h a 20 h locales) et p06 valide 06 Z du lendemain (20 h a 2 h locales), combinees : 1 - (1-a)(1-b)
-  fenetre stricte = p06 valide 06 Z du lendemain seulement (20 h a 2 h locales)
-  fenetre hors soir = p06 valide 12 Z et 18 Z du jour (2 h a 14 h locales)
-Sensibilite : cycle 07 Z du jour (achat le jour a 9 h, prix pi_jour_9h).
-Sorties : tables/filtre_diag_jours.csv, tables/filtre_scenario_bon_sens.csv, data/days_prevision_NYC.csv
-"""
+"""Informed manager: buys the real contract only when the hourly forecast places rain in opening hours.
+Comments in the code are in French."""
 import os, math, numpy as np, pandas as pd
-HERE=os.path.dirname(os.path.abspath(__file__)); TAB=f"{HERE}/tables"; DATA=f"{HERE}/data"; RAW=f"{DATA}/raw"
+HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); os.makedirs(f"{HERE}/build",exist_ok=True); TAB=f"{HERE}/results"; DATA=f"{HERE}/data"; RAW=f"{DATA}/raw"
 B=2000; BLOCK=7; rng=np.random.default_rng(20260918); FEE=lambda p:0.07*p*(1-p); PERTE=0.5   # part de la recette perdue un soir de pluie
 mos=pd.concat([pd.read_csv(f"{RAW}/mos_KNYC_{y}.csv",parse_dates=["runtime","ftime"]) for y in (2021,2022,2025,2026)])
 mos=mos[mos.station=="KNYC"]; p06={(r.runtime,r.ftime):r.p06/100 for r in mos[mos.p06.notna()].itertuples()}
@@ -62,10 +54,10 @@ for per,sub in (("2021-2026",days),("2025-2026",days[days.saison.isin([2025,2026
             r=qual(sub,base&(sub.p_strict_veille>=q),f"cote >= {s} et prevision stricte >= {q}",per); rows.append(r) if r else None
     for q in (0.3,0.5,0.7):
         r=qual(sub,sub.pi_veille_12h.notna()&(sub.p_soir_veille>=q),f"prevision soir >= {q} seule",per); rows.append(r) if r else None
-dj=pd.DataFrame(rows); dj.to_csv(f"{TAB}/filtre_diag_jours.csv",index=False)
+dj=pd.DataFrame(rows); dj.to_csv(f"{TAB}/informed_manager.csv",index=False)
 print("\n--- qualite de la couverture selon la regle d'achat (jours de saison avec cote veille 12 h)"); print(dj.round(3).to_string())
 # --- 3. scenario de bon sens : 20 plus grosses soirees, h = 0,6, contrat reel, filtre prevision, dix lieux, saisons 2025 et 2026
-cal=pd.read_csv(f"{DATA}/calendrier.csv",parse_dates=["date"]); panel=pd.read_csv(f"{DATA}/panel_rooftops.csv")
+cal=pd.read_csv(f"{DATA}/calendar.csv",parse_dates=["date"]); panel=pd.read_csv(f"{DATA}/venues.csv")
 d2=days[days.saison.isin([2025,2026])].copy(); d2["sp_ref"]=d2.spread_veille_12h.fillna(d2.spread_veille_12h.median())
 def season(nom,s):
     c=cal[(cal.nom==nom)&(cal.saison==s)].merge(d2[d2.saison==s][["date","Y","D","pi_veille_12h","sp_ref","p_soir_veille","p_strict_veille"]],on="date",how="inner")
@@ -94,7 +86,7 @@ for v in panel.itertuples():
                                  "engagement":float(np.where(e,hh*R[None,:]*(price+fee),0).sum(1).mean()),"gain_moyen":float(g.mean()),"ic_bas":float(np.percentile(g,2.5)),"ic_haut":float(np.percentile(g,97.5)),
                                  "pire5_sans":float(np.percentile(r0,5)),"pire5_avec":float(np.percentile(r1,5)),"ederington_e":float(1-r1.var()/r0.var()),"R_saison":float(R.sum())})
     print(v.nom,"ok")
-bs=pd.DataFrame(bons); bs.to_csv(f"{TAB}/filtre_scenario_bon_sens.csv",index=False)
+bs=pd.DataFrame(bons); bs.to_csv(f"{HERE}/build/filtre_scenario_bon_sens.csv",index=False)
 bs=bs.assign(gain_pct=100*bs.gain_moyen/bs.R_saison,eng_pct=100*bs.engagement/bs.R_saison,pire_pct=100*(bs.pire5_avec/bs.pire5_sans-1))
 g=bs.groupby(["saison","mode","filtre","q","seuil","execution"]).agg(couvertes=("couvertes","median"),paiements=("paiements","median"),utiles=("paiements_utiles","median"),eng_pct=("eng_pct","median"),gain_pct=("gain_pct","median"),n_pos=("ic_bas",lambda x:int((x>0).sum())),n_neg=("ic_haut",lambda x:int((x<0).sum())),pire_pct=("pire_pct","median"),e=("ederington_e","median")).reset_index()
 print("\n--- scenario de bon sens, 20 grosses soirees, h = 0,6, contrat reel, mediane des dix lieux"); print(g.round(2).to_string())

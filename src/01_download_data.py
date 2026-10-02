@@ -1,9 +1,9 @@
-"""01_collect.py : collecte brute Kalshi (marches de pluie, chandeliers horaires, transactions), IEM ASOS (p01i, trace T), IEM MOS.
-Cache disque : rien n'est re-telecharge si le fichier existe dans data/raw/. Aucun traitement ici.
-"""
+"""Download the raw data: Kalshi daily rain markets (prices, settlements) and, from the Iowa Environmental Mesonet,
+ASOS hourly rainfall at Central Park and NWS MOS forecasts. Files are cached in data/raw/.
+Comments in the code are in French."""
 import os, json, time, sys, requests
 from datetime import datetime, timezone
-HERE=os.path.dirname(os.path.abspath(__file__)); RAW=f"{HERE}/data/raw"; os.makedirs(RAW,exist_ok=True)
+HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); RAW=f"{HERE}/data/raw"; os.makedirs(RAW,exist_ok=True)
 K="https://api.elections.kalshi.com/trade-api/v2"
 S=requests.Session(); S.headers["User-Agent"]="memoire-xhec-analyse/1.0"
 LOG=open(f"{HERE}/data/collect.log","a")

@@ -1,18 +1,7 @@
-"""26_logiciel_optimal.py : que peut tirer un logiciel optimal des contrats Kalshi existants ?
-Question : si ce n'est plus le gerant qui parie mais un logiciel qui couvre chaque journee avec le contrat journalier existant,
-en choisissant chaque jour la quantite optimale a partir de toute l'information disponible (cote, prevision horaire), jusqu'ou peut aller la couverture ?
-Instrument : un seul contrat par jour, paie 1 si Y (pluie journaliere). Perte du lieu : R x D (soiree perdue), D inclus dans Y (aucune perte non payee).
-Resultat classique de couverture a variance minimale, conditionnel a l'information I du jour :
-  quantite optimale h* = R x P(D | Y, I)   (contrats par dollar de recette)
-  efficacite maximale ce jour-la  e(I) = rho^2(D, Y | I) = P(D|I) (1 - P(Y|I)) / (P(Y|I) (1 - P(D|I)))
-  -> un jour ou la pluie est quasi certaine (P(Y|I) proche de 1) ne peut pas etre couvert, quelle que soit la precision sur D.
-Partie A : borne theorique e_max = moyenne de e(I) ponderee par la variance de la perte, pour des ensembles d'information croissants,
-           regle actuelle (trace = oui) et regle TWC (trace = non, reconstruite : pluie mesuree > 0), en echantillon (borne haute) et par saison exclue.
-Partie B : simulation dix lieux, h_t = k x R_t x P^(D | Y, I_t) estime sur les autres saisons, prix reels, frais, mid et quart d'ecart, 2 000 saisons rejouees par blocs de 7 jours.
-Sorties : tables/logiciel_borne.csv, tables/logiciel_simulation.csv
-"""
+"""Optimal program: variance-minimising quantity each day, theoretical bound and simulation.
+Comments in the code are in French."""
 import os, math, numpy as np, pandas as pd
-HERE=os.path.dirname(os.path.abspath(__file__)); TAB=f"{HERE}/tables"; DATA=f"{HERE}/data"
+HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); TAB=f"{HERE}/results"; DATA=f"{HERE}/data"
 B=2000; BLOCK=7; rng=np.random.default_rng(20260918); FEE=lambda p:0.07*p*(1-p); PERTE=0.5   # part de la recette perdue un soir de pluie
 d=pd.read_csv(f"{DATA}/days_prevision_NYC.csv",parse_dates=["date"]); d["Y_twc"]=(d.day_in>0).astype(int); d["saison"]=d.date.dt.year
 d["D_twc"]=d.D*d.Y_twc   # sous la regle TWC une soiree perdue est toujours une pluie mesuree (>= 1 mm)
@@ -54,10 +43,10 @@ for regle,Ycol,Dcol in (("actuelle, trace = oui","Y","D"),("TWC, trace = non","Y
         for s in (2025,2026):
             e_o,n_o=e_max(d[d.saison!=s],d[d.saison==s],cols,Ycol,Dcol); oos.append(e_o)
         rowsA.append({"regle":regle,"information":lab,"n":n,"e_max_in":e_in,"e_max_oos_2025":oos[0],"e_max_oos_2026":oos[1]})
-A=pd.DataFrame(rowsA); A.to_csv(f"{TAB}/logiciel_borne.csv",index=False); pd.set_option("display.width",250)
+A=pd.DataFrame(rowsA); A.to_csv(f"{TAB}/optimal_program_bound.csv",index=False); pd.set_option("display.width",250)
 print("--- Partie A : borne d'efficacite de couverture (reduction de variance maximale), jour par jour"); print(A.round(3).to_string())
 # --- Partie B : simulation dix lieux
-cal=pd.read_csv(f"{DATA}/calendrier.csv",parse_dates=["date"]); panel=pd.read_csv(f"{DATA}/panel_rooftops.csv")
+cal=pd.read_csv(f"{DATA}/calendar.csv",parse_dates=["date"]); panel=pd.read_csv(f"{DATA}/venues.csv")
 d2=d[d.saison.isin([2025,2026])].copy(); d2["sp_ref"]=d2.spread_veille_12h.fillna(d2.spread_veille_12h.median())
 def pDY_hat(train,test,cols):
     """P(D | Y = 1, I) par cellule de prevision, estime sur train (jours de pluie), applique a test"""
@@ -99,7 +88,7 @@ for v in panel.itertuples():
                                           "engagement":float(np.where(e,hh*R[None,:]*(price+fee),0).sum(1).mean()),"gain_moyen":float(g.mean()),"ic_bas":float(np.percentile(g,2.5)),"ic_haut":float(np.percentile(g,97.5)),
                                           "pire5_sans":float(np.percentile(r0,5)),"pire5_avec":float(np.percentile(r1,5)),"ederington_e":float(1-r1.var()/r0.var()),"R_saison":float(R.sum())})
     print(v.nom,"ok")
-bs=pd.DataFrame(rowsB); bs.to_csv(f"{TAB}/logiciel_simulation.csv",index=False)
+bs=pd.DataFrame(rowsB); bs.to_csv(f"{TAB}/optimal_program_simulation.csv",index=False)
 bs=bs.assign(gain_pct=100*bs.gain_moyen/bs.R_saison,eng_pct=100*bs.engagement/bs.R_saison,pire_pct=100*(bs.pire5_avec/bs.pire5_sans-1))
 g=bs.groupby(["contrat","perimetre","k","execution","information","saison"]).agg(couvertes=("couvertes","median"),eng_pct=("eng_pct","median"),gain_pct=("gain_pct","median"),n_pos=("ic_bas",lambda x:int((x>0).sum())),n_neg=("ic_haut",lambda x:int((x<0).sum())),pire_pct=("pire_pct","median"),e=("ederington_e","median")).reset_index()
 print("\n--- Partie B : logiciel optimal, h = k x P(D | Y, I), mediane des dix lieux, gain en % de la recette de saison"); print(g.round(2).to_string())

@@ -1,36 +1,43 @@
-# Basis Risk in Prediction Markets: replication files
+# Basis Risk in Prediction Markets
 
-Code, result tables and pre-registration for:
+Replication files for **Basis Risk in Prediction Markets: Can a Rain Contract Hedge New York Rooftop Bars?** (Paul Iturbide, 2026, SSRN working paper).
 
-> Iturbide, P. (2026). *Basis Risk in Prediction Markets: Can a Rain Contract Hedge New York Rooftop Bars?* SSRN working paper.
+**In one paragraph.** Kalshi's daily rain contract for New York is well priced, but it pays on rain over the whole day, while a rooftop bar loses money on rain between 6 p.m. and 1 a.m. As a result, 69% of payouts fall on evenings that were not lost, and the contract barely protects cash flow. A contract with the same market and fees, but paying on the evening window, does.
 
-## Contents
+## What is in this repository
 
-| Path | What it is |
-|---|---|
-| `01_collect.py` | Downloads the raw data from public sources: Kalshi API (daily NYC rain markets, prices), Iowa Environmental Mesonet (ASOS hourly rainfall at Central Park, NWS MOS forecasts). |
-| `02_` to `29_` | Analysis scripts, to run in numeric order. `29_figures_article.py` draws the three figures of the paper. |
-| `tables/` | Every result table used in the paper. |
-| `data/` | Venue panel parameters, season calendar, simulated season paths. |
-| `PREREGISTRATION.md` | Pre-registration of the definitions, diagnostics and sensitivity grids, time-stamped 16 September 2026, 19:11 UTC, before any data was downloaded (in French, unchanged). |
+```
+src/                 the code, ten scripts run in order (01 to 10)
+data/                inputs: the ten venues and their season calendar
+results/             every table behind the paper
+figures/             the three figures of the paper
+preregistration.md   definitions fixed before any data was downloaded
+run_all.sh           rebuilds everything from the raw data
+```
 
-Raw Kalshi market data are not redistributed here: `01_collect.py` downloads them again from Kalshi's public API. Code comments are in French.
+The pre-registration is time-stamped 16 September 2026, 19:11 UTC, and kept unchanged (in French).
 
 ## Reproduce
 
 ```bash
 pip install -r requirements.txt
-python 29_figures_article.py   # paper figures, from the included tables and data
-python 01_collect.py           # full rebuild: download the raw data, then run 02 to 28 in order
+python src/10_figures.py    # redraws the three figures from results/ and data/
+bash run_all.sh             # full rebuild: downloads the raw data, then runs 01 to 10 (about 2 minutes after download)
 ```
 
-## Where each result comes from
+Raw data come from public sources (Kalshi API; Iowa Environmental Mesonet for ASOS rainfall and NWS forecasts). `src/01_download_data.py` downloads them into `data/raw/`; they are not stored here.
 
-| Paper | Files |
-|---|---|
-| Table 1 | `tables/h1_contingence.csv`, `tables/h1_experience_naturelle.csv`, `tables/h2_chargement.csv` |
-| Table 2 | `tables/strategie_optimale.csv`, `tables/parfait_optimale.csv`, `tables/parfait_scenario_bon_sens.csv` |
-| Figure 1 | `tables/h2_fiabilite.csv`, `tables/h1_contingence.csv` |
-| Figure 2 | `data/chemins_parfait.csv`, `data/calendrier.csv` |
-| Figure 3 | `tables/parfait_scenario_bon_sens.csv` |
-| Robustness and buyer-side tests | `tables/h1_sensibilite.csv`, `tables/filtre_diag_jours.csv`, `tables/logiciel_borne.csv`, `tables/logiciel_simulation.csv` |
+## From the paper to the files
+
+| In the paper | Script | Results |
+|---|---|---|
+| Does the contract pay on the right evenings? (Table 1, Figure 1b) | `02_trigger.py` | `trigger.csv`, `trigger_trace_rule.csv`, `trigger_sensitivity.csv` |
+| Is the price fair? (Table 1, Figure 1a) | `03_price.py` | `price.csv`, `calibration.csv`, `liquidity.csv` |
+| The ten venues (Section 3) | `04_venues.py`, `05_calendar.py` | `data/venues.csv`, `data/calendar.csv` |
+| Hedging with the Kalshi contract (Table 2) | `06_hedge_kalshi.py` | `hedge_kalshi.csv` |
+| The perfect contract (Table 2, Figures 2 and 3) | `07_perfect_contract.py` | `hedge_perfect.csv`, `hedge_equal_coverage.csv`, `data/season_paths.csv` |
+| A better-informed manager (Section 4) | `08_informed_manager.py` | `informed_manager.csv` |
+| An optimal trading program (Section 4) | `09_optimal_program.py` | `optimal_program_bound.csv`, `optimal_program_simulation.csv` |
+| Figures 1 to 3 | `10_figures.py` | `figures/` |
+
+Code comments and column names are in French. Most useful terms: `reel` = Kalshi contract, `parfait` = perfect contract, `saison` = season, `ic_bas` / `ic_haut` = 95% confidence bounds, `pire5` = worst-of-twenty season (5th percentile).

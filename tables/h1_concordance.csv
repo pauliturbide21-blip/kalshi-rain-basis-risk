@@ -1,0 +1,9 @@
+ville,periode,declencheur,n,concordance,Y1_trig0,Y0_trig1
+NYC,apres_15juil2026,trigA,58,0.9482758620689655,0,3
+NYC,apres_15juil2026,trigB,58,1.0,0,0
+NYC,avant_15juil2026,trigA,297,0.9831649831649831,4,1
+NYC,avant_15juil2026,trigB,297,0.8686868686868687,38,1
+MIA,apres_15juil2026,trigA,57,0.8596491228070176,1,7
+MIA,apres_15juil2026,trigB,57,0.9824561403508771,1,0
+CHI,apres_15juil2026,trigA,57,0.8421052631578947,0,9
+CHI,apres_15juil2026,trigB,57,0.9824561403508771,0,1

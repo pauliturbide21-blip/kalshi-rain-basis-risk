@@ -1,0 +1,6 @@
+data/raw/
+data/days_*.csv
+data/collect.log
+figures/
+__pycache__/
+.DS_Store

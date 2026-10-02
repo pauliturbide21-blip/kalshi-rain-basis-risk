@@ -5,7 +5,7 @@ import os, json, time, sys, requests
 from datetime import datetime, timezone
 HERE=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); RAW=f"{HERE}/data/raw"; os.makedirs(RAW,exist_ok=True)
 K="https://api.elections.kalshi.com/trade-api/v2"
-S=requests.Session(); S.headers["User-Agent"]="memoire-xhec-analyse/1.0"
+S=requests.Session(); S.headers["User-Agent"]="kalshi-rain-basis-risk/1.0"
 LOG=open(f"{HERE}/data/collect.log","a")
 def log(*a):
     m=" ".join(str(x) for x in a); print(m,flush=True); LOG.write(datetime.now(timezone.utc).isoformat()+" "+m+"\n"); LOG.flush()
